@@ -1,4 +1,4 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
@@ -195,7 +195,7 @@
 
   <div class="ui">
     <section class="hero">
-      <h1>Geraldine 💖 Bienvenida a tu universo 3D SUPER EXTRA WOW</h1>
+      <h1>Geraldine 💖 Bienvenida a tu universo mágico</h1>
       <p>Compatible con celular, ultra interactivo, brillante y romántico al máximo.</p>
       <div class="meta">
         <span class="pill" id="kissCount">Besitos 3D: 0</span>
@@ -220,6 +220,9 @@
   <script type="module">
     import * as THREE from 'https://esm.sh/three@0.164.1';
     import { OrbitControls } from 'https://esm.sh/three@0.164.1/examples/jsm/controls/OrbitControls.js';
+    import { EffectComposer } from 'https://esm.sh/three@0.164.1/examples/jsm/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'https://esm.sh/three@0.164.1/examples/jsm/postprocessing/RenderPass.js';
+    import { UnrealBloomPass } from 'https://esm.sh/three@0.164.1/examples/jsm/postprocessing/UnrealBloomPass.js';
 
     const canvas = document.getElementById('scene');
     const phraseBox = document.getElementById('phraseBox');
@@ -243,6 +246,11 @@
     const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 100);
     camera.position.set(0, 0.4, isMobile ? 6 : 5.2);
 
+    const composer = new EffectComposer(renderer);
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), lowPower ? 0.95 : 1.25, 0.6, 0.2);
+    bloomPass.threshold = 0.02;
+    bloomPass.radius = lowPower ? 0.45 : 0.62;
+
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.06;
@@ -251,6 +259,9 @@
     controls.enablePan = false;
     controls.rotateSpeed = isMobile ? 0.8 : 1;
     controls.zoomSpeed = isMobile ? 0.9 : 1.1;
+
+    composer.addPass(new RenderPass(scene, camera));
+    composer.addPass(bloomPass);
 
     const ambient = new THREE.AmbientLight(0xffcbeb, 1.25);
     const key = new THREE.PointLight(0xff61b9, 28, 30, 2);
@@ -402,6 +413,7 @@
         spawnBurst(hit.point);
         spawnWave(hit.point);
         heartMat.emissiveIntensity = 1.9;
+        wowEnergy = Math.min(1, wowEnergy + 0.18);
         setTimeout(() => (heartMat.emissiveIntensity = 0.85), 180);
       }
     }
@@ -515,6 +527,7 @@
       typeText(phrases[Math.floor(Math.random() * phrases.length)]);
       addKisses(20);
       shakePower = 0.22;
+      wowEnergy = 1;
     });
 
     window.addEventListener('resize', () => {
@@ -522,6 +535,7 @@
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, lowPower ? 1.6 : 2));
+      composer.setSize(window.innerWidth, window.innerHeight);
     });
 
 
@@ -541,6 +555,7 @@
     const clock = new THREE.Clock();
     let userInteracting = false;
     let shakePower = 0;
+    let wowEnergy = 0;
     ['pointerdown', 'touchstart', 'wheel'].forEach(evt => window.addEventListener(evt, () => (userInteracting = true), { passive: true }));
 
     function animate() {
@@ -615,8 +630,17 @@
         shakePower *= 0.92;
       }
 
+      wowEnergy = Math.max(0, wowEnergy - dt * 0.55);
+      const beat = 0.5 + Math.sin(t * 6.2) * 0.5;
+      const energy = beat * 0.25 + wowEnergy;
+      bloomPass.strength = (lowPower ? 0.8 : 1.05) + energy * (lowPower ? 0.8 : 1.2);
+      ambient.intensity = 1.15 + energy * 0.35;
+      key.intensity = 22 + energy * 18;
+      rim.intensity = 15 + energy * 14;
+      topGlow.intensity = (lowPower ? 4 : 6) + energy * 5;
+
       controls.update();
-      renderer.render(scene, camera);
+      composer.render();
       requestAnimationFrame(animate);
     }
 
