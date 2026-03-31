@@ -123,7 +123,7 @@
       border-radius: 16px;
       padding: 10px;
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 8px;
     }
 
@@ -211,6 +211,7 @@
       <button id="btnPhrase">Frase</button>
       <button id="btnKiss">+10 Besos</button>
       <button id="btnColor">Neón</button>
+      <button id="btnWow">MEGA WOW</button>
     </section>
   </div>
 
@@ -284,6 +285,7 @@
     heartGeo.center();
 
     const heartMat = new THREE.MeshPhysicalMaterial({
+      side: THREE.DoubleSide,
       color: 0xff3999,
       emissive: 0x6a0848,
       emissiveIntensity: 0.85,
@@ -296,6 +298,8 @@
     });
 
     const heart = new THREE.Mesh(heartGeo, heartMat);
+    heart.rotation.y = Math.PI; // corrige orientación para que no se vea al revés
+    heart.rotation.z = Math.PI;
     root.add(heart);
 
     const ring = new THREE.Mesh(
@@ -401,7 +405,15 @@
       'Geraldine, esta galaxia 3D late por ti 💘',
       'Tu amor hace que cada partícula brille más.',
       'Eres la escena más hermosa del universo.',
-      'Contigo todo se vuelve mágico, eterno y WOW.'
+      'Contigo todo se vuelve mágico, eterno y WOW.',
+      'Cuando sonríes, el universo entero cambia de color ✨',
+      'Mi lugar favorito siempre será donde estés tú 🌹',
+      'Eres mi coincidencia favorita, mi milagro bonito 💞',
+      'Cada segundo contigo se siente como fuegos artificiales en el corazón 🎆',
+      'Si la vida fuera una canción, tú eres el coro más hermoso 🎶',
+      'Te pienso, te admiro, te amo más cada día 💗',
+      'Eres el WOW más precioso que me regaló el destino 💎',
+      'Tu mirada tiene más magia que mil estrellas fugaces 🌌'
     ];
 
     function typeText(text) {
@@ -419,6 +431,22 @@
       kisses += n;
       kissCount.textContent = `Besitos 3D: ${kisses}`;
       spawnBurst(new THREE.Vector3(0, 0.15, 0.2), lowPower ? 18 : 30);
+    }
+
+
+    function megaWow() {
+      // Pulso visual + ráfaga central extra impresionante
+      heart.scale.setScalar(1.45);
+      ring.scale.setScalar(1.28);
+      ring2.scale.setScalar(1.35);
+      spawnBurst(new THREE.Vector3(0, 0.3, 0), lowPower ? 24 : 50);
+      spawnBurst(new THREE.Vector3(0.4, -0.1, 0.2), lowPower ? 16 : 32);
+      spawnBurst(new THREE.Vector3(-0.4, 0.1, -0.2), lowPower ? 16 : 32);
+      setTimeout(() => {
+        heart.scale.setScalar(1);
+        ring.scale.setScalar(1);
+        ring2.scale.setScalar(1);
+      }, 260);
     }
 
     let stormInterval = null;
@@ -459,6 +487,13 @@
       rim.color.set(neon ? 0x4ad7ff : 0x805fff);
       topGlow.color.set(neon ? 0xb8f2ff : 0x7ee2ff);
       ring.material.color.set(neon ? 0x9bdfff : 0xff95d3);
+    });
+
+
+    document.getElementById('btnWow').addEventListener('click', () => {
+      megaWow();
+      typeText(phrases[Math.floor(Math.random() * phrases.length)]);
+      addKisses(20);
     });
 
     window.addEventListener('resize', () => {
@@ -520,6 +555,7 @@
     }
 
     typeText(phrases[0]);
+    setInterval(() => typeText(phrases[Math.floor(Math.random() * phrases.length)]), 8500);
     animate();
   </script>
 </body>
