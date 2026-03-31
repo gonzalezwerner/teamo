@@ -1,391 +1,527 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Geraldine en 3D 💘</title>
-  <style>
-    :root {
-      --pink: #ff5eb5;
-      --magenta: #ff2f8c;
-      --purple: #6b27ff;
-      --glass: rgba(255, 255, 255, 0.14);
-      --text: #fff1fa;
-    }
 
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      overflow: hidden;
-      font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
-      color: var(--text);
-      background: radial-gradient(circle at 20% 20%, #2c0f5c, #11001d 45%, #040008 100%);
-    }
-
-    #scene {
-      position: fixed;
-      inset: 0;
-      width: 100vw;
-      height: 100vh;
-      display: block;
-    }
-
-    .ui {
-      position: fixed;
-      inset: 0;
-      display: grid;
-      grid-template-rows: auto 1fr auto;
-      pointer-events: none;
-      z-index: 3;
-    }
-
-    .hero {
-      margin: 16px;
-      padding: 18px;
-      border-radius: 20px;
-      backdrop-filter: blur(8px);
-      background: linear-gradient(140deg, rgba(255, 94, 181, .22), rgba(107, 39, 255, .14));
-      border: 1px solid rgba(255, 255, 255, .24);
-      box-shadow: 0 10px 30px rgba(0,0,0,.38);
-      pointer-events: auto;
-      max-width: 720px;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(1.5rem, 3vw, 2.6rem);
-      text-shadow: 0 5px 16px rgba(255, 47, 140, .6);
-    }
-
-    .hero p { margin: 6px 0 0; opacity: .94; }
-
-    .controls {
-      align-self: end;
-      margin: 14px;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 10px;
-      pointer-events: auto;
-    }
-
-    button {
-      border: 0;
-      border-radius: 14px;
-      padding: 11px 12px;
-      font-weight: 700;
-      cursor: pointer;
-      color: #300d3f;
-      background: linear-gradient(180deg, #ffe7f7, #ffc4e9);
-      box-shadow: 0 8px 24px rgba(255, 47, 140, .35);
-      transition: transform .15s ease;
-    }
-
-    button:hover { transform: translateY(-2px); }
-
-    .badge {
-      display: inline-block;
-      margin-top: 10px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      background: rgba(255,255,255,.18);
-      font-size: .9rem;
-    }
-
-    .phrase {
-      margin: 10px 16px;
-      max-width: 580px;
-      padding: 12px 14px;
-      border-radius: 14px;
-      background: var(--glass);
-      border: 1px solid rgba(255, 255, 255, .25);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, .25);
-      pointer-events: auto;
-      min-height: 52px;
-      line-height: 1.4;
-    }
-
-    .hint {
-      position: fixed;
-      right: 14px;
-      top: 18px;
-      padding: 8px 10px;
-      border-radius: 10px;
-      font-size: .85rem;
-      background: rgba(0,0,0,.38);
-      border: 1px solid rgba(255,255,255,.18);
-      z-index: 4;
-      pointer-events: none;
-    }
-  </style>
-</head>
-<body>
-  <canvas id="scene"></canvas>
-
-  <div class="ui">
-    <section class="hero">
-      <h1>Geraldine, eres un sueño en 3D ✨💖</h1>
-      <p>Versión <strong>demasiado WOW</strong>: corazón 3D vivo, partículas, brillo, rotación y explosiones románticas.</p>
-      <span class="badge" id="kissCount">Besitos 3D: 0</span>
-    </section>
-
-    <div class="phrase" id="phraseBox"></div>
-
-    <section class="controls">
-      <button id="btnPulse">Pulso de Amor</button>
-      <button id="btnStorm">Tormenta de Corazones</button>
-      <button id="btnPhrase">Nueva Frase</button>
-      <button id="btnKiss">+10 Besitos</button>
-      <button id="btnColor">Modo Neón</button>
-    </section>
-  </div>
-
-  <div class="hint">Arrastra para girar • rueda para zoom • clic para explotar amor</div>
-
-  <script type="module">
-    import * as THREE from 'https://unpkg.com/three@0.164.1/build/three.module.js';
-    import { OrbitControls } from 'https://unpkg.com/three@0.164.1/examples/jsm/controls/OrbitControls.js';
-
-    const canvas = document.getElementById('scene');
-    const phraseBox = document.getElementById('phraseBox');
-    const kissCount = document.getElementById('kissCount');
-
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.15;
-
-    const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x14001f, 0.045);
-
-    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 100);
-    camera.position.set(0, 0.6, 5.6);
-
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.minDistance = 2.4;
-    controls.maxDistance = 11;
-
-    const ambient = new THREE.AmbientLight(0xffc6e9, 1.3);
-    const key = new THREE.PointLight(0xff66b8, 26, 30, 2);
-    key.position.set(2.5, 2.2, 2.2);
-    const rim = new THREE.PointLight(0x7a5cff, 18, 30, 2);
-    rim.position.set(-3.2, -1.5, -2.5);
-    scene.add(ambient, key, rim);
-
-    const group = new THREE.Group();
-    scene.add(group);
-
-    function createHeartShape(scale = 1) {
-      const s = new THREE.Shape();
-      s.moveTo(0, 0.2 * scale);
-      s.bezierCurveTo(0, 0.2 * scale, -0.6 * scale, -0.4 * scale, -1.2 * scale, 0.2 * scale);
-      s.bezierCurveTo(-2 * scale, 1 * scale, -0.7 * scale, 2.3 * scale, 0, 2.8 * scale);
-      s.bezierCurveTo(0.7 * scale, 2.3 * scale, 2 * scale, 1 * scale, 1.2 * scale, 0.2 * scale);
-      s.bezierCurveTo(0.6 * scale, -0.4 * scale, 0, 0.2 * scale, 0, 0.2 * scale);
-      return s;
-    }
-
-    const heartGeo = new THREE.ExtrudeGeometry(createHeartShape(0.85), {
-      depth: 0.85,
-      bevelEnabled: true,
-      bevelThickness: 0.22,
-      bevelSize: 0.18,
-      bevelSegments: 10,
-      curveSegments: 28
-    });
-    heartGeo.center();
-
-    const heartMat = new THREE.MeshPhysicalMaterial({
-      color: 0xff3d9a,
-      emissive: 0x6d0f4f,
-      emissiveIntensity: 0.8,
-      metalness: 0.08,
-      roughness: 0.18,
-      clearcoat: 1,
-      clearcoatRoughness: 0.1,
-      reflectivity: 1,
-      transmission: 0.06
-    });
-
-    const heart = new THREE.Mesh(heartGeo, heartMat);
-    heart.castShadow = false;
-    group.add(heart);
-
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(2.25, 0.045, 20, 240),
-      new THREE.MeshBasicMaterial({ color: 0xff8aca, transparent: true, opacity: 0.45 })
-    );
-    ring.rotation.x = Math.PI * 0.33;
-    group.add(ring);
-
-    const particleCount = 2400;
-    const positions = new Float32Array(particleCount * 3);
-    const sizes = new Float32Array(particleCount);
-    for (let i = 0; i < particleCount; i++) {
-      const r = 3 + Math.random() * 10;
-      const a = Math.random() * Math.PI * 2;
-      const y = (Math.random() - 0.5) * 8;
-      positions[i * 3] = Math.cos(a) * r;
-      positions[i * 3 + 1] = y;
-      positions[i * 3 + 2] = Math.sin(a) * r;
-      sizes[i] = Math.random();
-    }
-
-    const pGeo = new THREE.BufferGeometry();
-    pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    pGeo.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
-
-    const pMat = new THREE.PointsMaterial({
-      size: 0.055,
-      color: 0xffb3db,
-      transparent: true,
-      opacity: 0.85,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
-    });
-
-    const particles = new THREE.Points(pGeo, pMat);
-    scene.add(particles);
-
-    const burstHearts = [];
-    function spawnBurst(worldPoint) {
-      for (let i = 0; i < 42; i++) {
-        const g = new THREE.SphereGeometry(0.03 + Math.random() * 0.04, 8, 8);
-        const m = new THREE.MeshBasicMaterial({ color: [0xff6ec7, 0xff2f8c, 0xff9ad7][i % 3] });
-        const mesh = new THREE.Mesh(g, m);
-        mesh.position.copy(worldPoint);
-        const velocity = new THREE.Vector3(
-          (Math.random() - 0.5) * 0.12,
-          (Math.random() - 0.2) * 0.14,
-          (Math.random() - 0.5) * 0.12
-        );
-        burstHearts.push({ mesh, velocity, life: 1 + Math.random() * 0.8 });
-        scene.add(mesh);
-      }
-    }
-
-    const raycaster = new THREE.Raycaster();
-    const pointer = new THREE.Vector2();
-
-    window.addEventListener('click', (ev) => {
-      pointer.x = (ev.clientX / window.innerWidth) * 2 - 1;
-      pointer.y = -(ev.clientY / window.innerHeight) * 2 + 1;
-      raycaster.setFromCamera(pointer, camera);
-      const hit = raycaster.intersectObject(heart)[0];
-      if (hit) {
-        spawnBurst(hit.point);
-        heartMat.emissiveIntensity = 1.8;
-        setTimeout(() => (heartMat.emissiveIntensity = 0.8), 220);
-      }
-    });
-
-    const phrases = [
-      'Geraldine, incluso en 3D te ves infinita en mi corazón.',
-      'Si el universo fuera render, tú serías su luz más hermosa.',
-      'Cada frame contigo se vuelve una obra de arte romántica.',
-      'Tú + yo = la escena perfecta de amor eterno.'
-    ];
-
-    function typeText(text) {
-      phraseBox.textContent = '';
-      let i = 0;
-      const id = setInterval(() => {
-        phraseBox.textContent += text[i] || '';
-        i++;
-        if (i > text.length) clearInterval(id);
-      }, 26);
-    }
-
-    let kisses = 0;
-    function addKisses(n) {
-      kisses += n;
-      kissCount.textContent = `Besitos 3D: ${kisses}`;
-      spawnBurst(new THREE.Vector3(0, 0.2, 0.2));
-    }
-
-    let stormTimer = null;
-    let neon = false;
-
-    document.getElementById('btnPulse').addEventListener('click', () => {
-      heart.scale.setScalar(1.25);
-      ring.scale.setScalar(1.2);
-      setTimeout(() => {
-        heart.scale.setScalar(1);
-        ring.scale.setScalar(1);
-      }, 200);
-      addKisses(2);
-    });
-
-    document.getElementById('btnStorm').addEventListener('click', () => {
-      clearInterval(stormTimer);
-      stormTimer = setInterval(() => {
-        const p = new THREE.Vector3((Math.random() - 0.5) * 3, Math.random() * 2.6, (Math.random() - 0.5) * 3);
-        spawnBurst(p);
-      }, 110);
-      setTimeout(() => clearInterval(stormTimer), 2600);
-    });
-
-    document.getElementById('btnPhrase').addEventListener('click', () => {
-      typeText(phrases[Math.floor(Math.random() * phrases.length)]);
-    });
-
-    document.getElementById('btnKiss').addEventListener('click', () => addKisses(10));
-
-    document.getElementById('btnColor').addEventListener('click', () => {
-      neon = !neon;
-      heartMat.color.set(neon ? 0x8c7bff : 0xff3d9a);
-      pMat.color.set(neon ? 0x9fe6ff : 0xffb3db);
-      key.color.set(neon ? 0xa897ff : 0xff66b8);
-      rim.color.set(neon ? 0x48d4ff : 0x7a5cff);
-    });
-
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    });
-
-    const clock = new THREE.Clock();
-    function animate() {
-      const t = clock.getElapsedTime();
-      const dt = Math.min(clock.getDelta(), 0.033);
-
-      heart.rotation.y += 0.0035;
-      heart.rotation.x = Math.sin(t * 0.9) * 0.07;
-      const s = 1 + Math.sin(t * 2.6) * 0.05;
-      heart.scale.setScalar(s);
-
-      ring.rotation.z += 0.003;
-      ring.position.y = Math.sin(t * 1.2) * 0.12;
-
-      particles.rotation.y += 0.0009;
-
-      for (let i = burstHearts.length - 1; i >= 0; i--) {
-        const b = burstHearts[i];
-        b.life -= dt;
-        b.mesh.position.addScaledVector(b.velocity, dt * 8);
-        b.velocity.y -= dt * 0.045;
-        b.mesh.scale.setScalar(Math.max(0.05, b.life));
-        b.mesh.material.opacity = Math.max(0, b.life);
-        b.mesh.material.transparent = true;
-        if (b.life <= 0) {
-          scene.remove(b.mesh);
-          b.mesh.geometry.dispose();
-          b.mesh.material.dispose();
-          burstHearts.splice(i, 1);
-        }
-      }
-
-      controls.update();
-      renderer.render(scene, camera);
-      requestAnimationFrame(animate);
-    }
-
-    typeText(phrases[0]);
-    animate();
-  </script>
-</body>
-</html>
++<!DOCTYPE html>
++<html lang="es">
++<head>
++  <meta charset="UTF-8" />
++  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
++  <title>Geraldine: Love Dimension 3D 💖</title>
++  <style>
++    :root {
++      --text: #fff1fb;
++      --glass: rgba(255, 255, 255, 0.14);
++      --glass-strong: rgba(255, 255, 255, 0.2);
++    }
++
++    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
++
++    html, body {
++      margin: 0;
++      width: 100%;
++      height: 100%;
++      overflow: hidden;
++      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
++      color: var(--text);
++      background: radial-gradient(circle at 20% 20%, #3a0f65 0%, #12001f 45%, #030008 100%);
++      touch-action: manipulation;
++    }
++
++    #scene {
++      position: fixed;
++      inset: 0;
++      width: 100vw;
++      height: 100vh;
++      display: block;
++    }
++
++    .aurora {
++      position: fixed;
++      inset: -20%;
++      background:
++        radial-gradient(circle at 25% 35%, rgba(255, 83, 170, 0.22), transparent 40%),
++        radial-gradient(circle at 75% 65%, rgba(123, 81, 255, 0.2), transparent 35%),
++        radial-gradient(circle at 40% 80%, rgba(98, 208, 255, 0.14), transparent 45%);
++      filter: blur(26px);
++      animation: auroraMove 14s ease-in-out infinite;
++      pointer-events: none;
++      z-index: 1;
++    }
++
++    @keyframes auroraMove {
++      0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
++      50% { transform: translate3d(2%, -2%, 0) scale(1.07); }
++    }
++
++    .ui {
++      position: fixed;
++      inset: 0;
++      display: grid;
++      grid-template-rows: auto 1fr auto;
++      pointer-events: none;
++      z-index: 5;
++      padding:
++        calc(10px + env(safe-area-inset-top))
++        calc(12px + env(safe-area-inset-right))
++        calc(10px + env(safe-area-inset-bottom))
++        calc(12px + env(safe-area-inset-left));
++      gap: 8px;
++    }
++
++    .hero,
++    .phrase,
++    .controls {
++      pointer-events: auto;
++      border: 1px solid rgba(255, 255, 255, 0.24);
++      background: linear-gradient(130deg, rgba(255, 88, 176, .18), rgba(97, 39, 255, .12));
++      backdrop-filter: blur(10px);
++      box-shadow: 0 8px 30px rgba(0,0,0,.32);
++    }
++
++    .hero {
++      max-width: 780px;
++      border-radius: 18px;
++      padding: 12px 14px;
++    }
++
++    .hero h1 {
++      margin: 0;
++      font-size: clamp(1.1rem, 4.8vw, 2.4rem);
++      line-height: 1.2;
++      text-shadow: 0 4px 14px rgba(255, 57, 157, .6);
++    }
++
++    .hero p {
++      margin: 6px 0 0;
++      font-size: clamp(.88rem, 2.8vw, 1.05rem);
++      opacity: .95;
++    }
++
++    .meta {
++      display: flex;
++      flex-wrap: wrap;
++      gap: 8px;
++      margin-top: 8px;
++    }
++
++    .pill {
++      font-size: .82rem;
++      background: var(--glass);
++      border: 1px solid rgba(255,255,255,.22);
++      padding: 5px 9px;
++      border-radius: 999px;
++    }
++
++    .phrase {
++      align-self: end;
++      max-width: 620px;
++      border-radius: 14px;
++      padding: 10px 12px;
++      min-height: 50px;
++      line-height: 1.4;
++      font-size: clamp(.9rem, 2.9vw, 1rem);
++    }
++
++    .controls {
++      border-radius: 16px;
++      padding: 10px;
++      display: grid;
++      grid-template-columns: repeat(5, minmax(0, 1fr));
++      gap: 8px;
++    }
++
++    button {
++      border: none;
++      border-radius: 12px;
++      font-weight: 800;
++      color: #2d0f3d;
++      background: linear-gradient(180deg, #ffeaf8, #ffc4e6);
++      box-shadow: 0 6px 18px rgba(255, 34, 145, .35);
++      padding: 11px 8px;
++      font-size: clamp(.78rem, 2.5vw, .92rem);
++      min-height: 44px;
++      cursor: pointer;
++      transition: transform .14s ease;
++    }
++
++    button:active { transform: scale(.96); }
++
++    .hint {
++      position: fixed;
++      right: calc(10px + env(safe-area-inset-right));
++      top: calc(10px + env(safe-area-inset-top));
++      z-index: 6;
++      font-size: .76rem;
++      padding: 7px 9px;
++      border-radius: 9px;
++      border: 1px solid rgba(255,255,255,.2);
++      background: rgba(0,0,0,.36);
++      pointer-events: none;
++    }
++
++    @media (max-width: 900px) {
++      .controls {
++        grid-template-columns: repeat(3, minmax(0, 1fr));
++      }
++    }
++
++    @media (max-width: 640px) {
++      .ui {
++        grid-template-rows: auto 1fr auto;
++        padding-top: calc(8px + env(safe-area-inset-top));
++      }
++
++      .hero {
++        border-radius: 14px;
++        padding: 10px;
++      }
++
++      .hint {
++        display: none;
++      }
++
++      .phrase {
++        max-width: 100%;
++        margin-right: 0;
++      }
++
++      .controls {
++        grid-template-columns: repeat(2, minmax(0, 1fr));
++        padding: 8px;
++      }
++    }
++  </style>
++</head>
++<body>
++  <canvas id="scene"></canvas>
++  <div class="aurora"></div>
++
++  <div class="ui">
++    <section class="hero">
++      <h1>Geraldine 💖 Bienvenida a tu universo 3D SUPER EXTRA WOW</h1>
++      <p>Compatible con celular, ultra interactivo, brillante y romántico al máximo.</p>
++      <div class="meta">
++        <span class="pill" id="kissCount">Besitos 3D: 0</span>
++        <span class="pill" id="qualityTag">Modo: Auto</span>
++      </div>
++    </section>
++
++    <div class="phrase" id="phraseBox"></div>
++
++    <section class="controls">
++      <button id="btnPulse">Pulso</button>
++      <button id="btnStorm">Tormenta</button>
++      <button id="btnPhrase">Frase</button>
++      <button id="btnKiss">+10 Besos</button>
++      <button id="btnColor">Neón</button>
++    </section>
++  </div>
++
++  <div class="hint">Arrastra/rota • pellizca zoom • toca el corazón</div>
++
++  <script type="module">
++    import * as THREE from 'https://esm.sh/three@0.164.1';
++    import { OrbitControls } from 'https://esm.sh/three@0.164.1/examples/jsm/controls/OrbitControls.js';
++
++    const canvas = document.getElementById('scene');
++    const phraseBox = document.getElementById('phraseBox');
++    const kissCount = document.getElementById('kissCount');
++    const qualityTag = document.getElementById('qualityTag');
++
++    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
++    const lowPower = isMobile || window.devicePixelRatio > 2;
++    const quality = lowPower ? 'Móvil Optimizado' : 'Ultra';
++    qualityTag.textContent = `Modo: ${quality}`;
++
++    const renderer = new THREE.WebGLRenderer({ canvas, antialias: !lowPower, alpha: true, powerPreference: 'high-performance' });
++    renderer.setPixelRatio(Math.min(window.devicePixelRatio, lowPower ? 1.6 : 2));
++    renderer.setSize(window.innerWidth, window.innerHeight);
++    renderer.toneMapping = THREE.ACESFilmicToneMapping;
++    renderer.toneMappingExposure = 1.22;
++
++    const scene = new THREE.Scene();
++    scene.fog = new THREE.FogExp2(0x120018, lowPower ? 0.05 : 0.04);
++
++    const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 100);
++    camera.position.set(0, 0.4, isMobile ? 6 : 5.2);
++
++    const controls = new OrbitControls(camera, renderer.domElement);
++    controls.enableDamping = true;
++    controls.dampingFactor = 0.06;
++    controls.minDistance = isMobile ? 3 : 2.4;
++    controls.maxDistance = 11;
++    controls.enablePan = false;
++    controls.rotateSpeed = isMobile ? 0.8 : 1;
++    controls.zoomSpeed = isMobile ? 0.9 : 1.1;
++
++    const ambient = new THREE.AmbientLight(0xffcbeb, 1.25);
++    const key = new THREE.PointLight(0xff61b9, 28, 30, 2);
++    key.position.set(2.4, 2.2, 2.3);
++    const rim = new THREE.PointLight(0x805fff, 19, 30, 2);
++    rim.position.set(-3.5, -1.4, -2.6);
++    const topGlow = new THREE.PointLight(0x7ee2ff, lowPower ? 5 : 7, 20, 2);
++    topGlow.position.set(0, 4, 0);
++    scene.add(ambient, key, rim, topGlow);
++
++    const root = new THREE.Group();
++    scene.add(root);
++
++    function createHeartShape(scale = 1) {
++      const s = new THREE.Shape();
++      s.moveTo(0, 0.2 * scale);
++      s.bezierCurveTo(0, 0.2 * scale, -0.6 * scale, -0.4 * scale, -1.2 * scale, 0.2 * scale);
++      s.bezierCurveTo(-2 * scale, 1 * scale, -0.7 * scale, 2.3 * scale, 0, 2.8 * scale);
++      s.bezierCurveTo(0.7 * scale, 2.3 * scale, 2 * scale, 1 * scale, 1.2 * scale, 0.2 * scale);
++      s.bezierCurveTo(0.6 * scale, -0.4 * scale, 0, 0.2 * scale, 0, 0.2 * scale);
++      return s;
++    }
++
++    const heartGeo = new THREE.ExtrudeGeometry(createHeartShape(0.9), {
++      depth: 0.95,
++      bevelEnabled: true,
++      bevelThickness: lowPower ? 0.16 : 0.22,
++      bevelSize: lowPower ? 0.12 : 0.18,
++      bevelSegments: lowPower ? 7 : 10,
++      curveSegments: lowPower ? 20 : 30
++    });
++    heartGeo.center();
++
++    const heartMat = new THREE.MeshPhysicalMaterial({
++      color: 0xff3999,
++      emissive: 0x6a0848,
++      emissiveIntensity: 0.85,
++      metalness: 0.08,
++      roughness: 0.16,
++      clearcoat: 1,
++      clearcoatRoughness: 0.1,
++      transmission: 0.09,
++      ior: 1.2
++    });
++
++    const heart = new THREE.Mesh(heartGeo, heartMat);
++    root.add(heart);
++
++    const ring = new THREE.Mesh(
++      new THREE.TorusGeometry(2.3, 0.05, 20, lowPower ? 180 : 260),
++      new THREE.MeshBasicMaterial({ color: 0xff95d3, transparent: true, opacity: 0.42 })
++    );
++    ring.rotation.x = Math.PI * 0.35;
++    root.add(ring);
++
++    const ring2 = new THREE.Mesh(
++      new THREE.TorusGeometry(2.75, 0.03, 16, lowPower ? 120 : 180),
++      new THREE.MeshBasicMaterial({ color: 0x7fd8ff, transparent: true, opacity: 0.26 })
++    );
++    ring2.rotation.y = Math.PI * 0.22;
++    ring2.rotation.x = Math.PI * 0.15;
++    root.add(ring2);
++
++    const particleCount = lowPower ? 1200 : 2600;
++    const pos = new Float32Array(particleCount * 3);
++    for (let i = 0; i < particleCount; i++) {
++      const r = 3 + Math.random() * 10;
++      const a = Math.random() * Math.PI * 2;
++      const y = (Math.random() - 0.5) * 8;
++      pos[i * 3] = Math.cos(a) * r;
++      pos[i * 3 + 1] = y;
++      pos[i * 3 + 2] = Math.sin(a) * r;
++    }
++
++    const pGeo = new THREE.BufferGeometry();
++    pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
++    const pMat = new THREE.PointsMaterial({
++      size: lowPower ? 0.05 : 0.06,
++      color: 0xffb8e0,
++      transparent: true,
++      opacity: 0.86,
++      blending: THREE.AdditiveBlending,
++      depthWrite: false
++    });
++    const particles = new THREE.Points(pGeo, pMat);
++    scene.add(particles);
++
++    const sparkCount = lowPower ? 12 : 20;
++    const sparks = [];
++    for (let i = 0; i < sparkCount; i++) {
++      const mesh = new THREE.Mesh(
++        new THREE.IcosahedronGeometry(lowPower ? 0.045 : 0.06, 0),
++        new THREE.MeshBasicMaterial({ color: i % 2 ? 0xff84cb : 0x8ddfff })
++      );
++      sparks.push({
++        mesh,
++        radius: 1.9 + Math.random() * 1.7,
++        speed: 0.4 + Math.random() * 0.8,
++        phase: Math.random() * Math.PI * 2,
++        offsetY: (Math.random() - 0.5) * 1.8
++      });
++      scene.add(mesh);
++    }
++
++    const burstPieces = [];
++    function spawnBurst(point, amount = lowPower ? 22 : 44) {
++      for (let i = 0; i < amount; i++) {
++        const m = new THREE.Mesh(
++          new THREE.SphereGeometry(0.025 + Math.random() * 0.04, 8, 8),
++          new THREE.MeshBasicMaterial({ color: [0xff6fcb, 0xff3b99, 0xff9ce8][i % 3], transparent: true })
++        );
++        m.position.copy(point);
++        burstPieces.push({
++          mesh: m,
++          vel: new THREE.Vector3(
++            (Math.random() - 0.5) * 0.13,
++            (Math.random() - 0.2) * 0.15,
++            (Math.random() - 0.5) * 0.13
++          ),
++          life: 1 + Math.random() * 0.9
++        });
++        scene.add(m);
++      }
++    }
++
++    const raycaster = new THREE.Raycaster();
++    const pointer = new THREE.Vector2();
++    function onTap(clientX, clientY) {
++      pointer.x = (clientX / window.innerWidth) * 2 - 1;
++      pointer.y = -(clientY / window.innerHeight) * 2 + 1;
++      raycaster.setFromCamera(pointer, camera);
++      const hit = raycaster.intersectObject(heart)[0];
++      if (hit) {
++        spawnBurst(hit.point);
++        heartMat.emissiveIntensity = 1.9;
++        setTimeout(() => (heartMat.emissiveIntensity = 0.85), 180);
++      }
++    }
++
++    window.addEventListener('click', (e) => onTap(e.clientX, e.clientY));
++    window.addEventListener('touchstart', (e) => {
++      if (e.touches.length === 1) {
++        const t = e.touches[0];
++        onTap(t.clientX, t.clientY);
++      }
++    }, { passive: true });
++
++    const phrases = [
++      'Geraldine, esta galaxia 3D late por ti 💘',
++      'Tu amor hace que cada partícula brille más.',
++      'Eres la escena más hermosa del universo.',
++      'Contigo todo se vuelve mágico, eterno y WOW.'
++    ];
++
++    function typeText(text) {
++      phraseBox.textContent = '';
++      let i = 0;
++      const timer = setInterval(() => {
++        phraseBox.textContent += text[i] || '';
++        i++;
++        if (i > text.length) clearInterval(timer);
++      }, 24);
++    }
++
++    let kisses = 0;
++    function addKisses(n) {
++      kisses += n;
++      kissCount.textContent = `Besitos 3D: ${kisses}`;
++      spawnBurst(new THREE.Vector3(0, 0.15, 0.2), lowPower ? 18 : 30);
++    }
++
++    let stormInterval = null;
++    let neon = false;
++
++    document.getElementById('btnPulse').addEventListener('click', () => {
++      heart.scale.setScalar(1.3);
++      ring.scale.setScalar(1.18);
++      ring2.scale.setScalar(1.25);
++      setTimeout(() => {
++        heart.scale.setScalar(1);
++        ring.scale.setScalar(1);
++        ring2.scale.setScalar(1);
++      }, 180);
++      addKisses(2);
++    });
++
++    document.getElementById('btnStorm').addEventListener('click', () => {
++      clearInterval(stormInterval);
++      stormInterval = setInterval(() => {
++        const p = new THREE.Vector3((Math.random() - 0.5) * 3.2, Math.random() * 2.5, (Math.random() - 0.5) * 3.2);
++        spawnBurst(p, lowPower ? 12 : 20);
++      }, 110);
++      setTimeout(() => clearInterval(stormInterval), 2400);
++    });
++
++    document.getElementById('btnPhrase').addEventListener('click', () => {
++      typeText(phrases[Math.floor(Math.random() * phrases.length)]);
++    });
++
++    document.getElementById('btnKiss').addEventListener('click', () => addKisses(10));
++
++    document.getElementById('btnColor').addEventListener('click', () => {
++      neon = !neon;
++      heartMat.color.set(neon ? 0x8f81ff : 0xff3999);
++      pMat.color.set(neon ? 0x9be8ff : 0xffb8e0);
++      key.color.set(neon ? 0xa799ff : 0xff61b9);
++      rim.color.set(neon ? 0x4ad7ff : 0x805fff);
++      topGlow.color.set(neon ? 0xb8f2ff : 0x7ee2ff);
++      ring.material.color.set(neon ? 0x9bdfff : 0xff95d3);
++    });
++
++    window.addEventListener('resize', () => {
++      camera.aspect = window.innerWidth / window.innerHeight;
++      camera.updateProjectionMatrix();
++      renderer.setSize(window.innerWidth, window.innerHeight);
++      renderer.setPixelRatio(Math.min(window.devicePixelRatio, lowPower ? 1.6 : 2));
++    });
++
++    const clock = new THREE.Clock();
++    let userInteracting = false;
++    ['pointerdown', 'touchstart', 'wheel'].forEach(evt => window.addEventListener(evt, () => (userInteracting = true), { passive: true }));
++
++    function animate() {
++      const t = clock.getElapsedTime();
++      const dt = Math.min(clock.getDelta(), 0.033);
++
++      if (!userInteracting) {
++        camera.position.x = Math.sin(t * 0.22) * 0.6;
++        camera.position.z = (isMobile ? 6 : 5.2) + Math.cos(t * 0.24) * 0.35;
++      }
++
++      heart.rotation.y += 0.004;
++      heart.rotation.x = Math.sin(t * 0.9) * 0.08;
++      heart.scale.setScalar(1 + Math.sin(t * 2.8) * 0.05);
++
++      ring.rotation.z += 0.003;
++      ring.position.y = Math.sin(t * 1.2) * 0.11;
++      ring2.rotation.y -= 0.004;
++      ring2.position.y = Math.cos(t * 1.05) * 0.16;
++
++      particles.rotation.y += 0.0009;
++
++      sparks.forEach((s, i) => {
++        const a = t * s.speed + s.phase;
++        s.mesh.position.set(Math.cos(a) * s.radius, s.offsetY + Math.sin(a * 1.4) * 0.5, Math.sin(a) * s.radius);
++        s.mesh.rotation.x += 0.01 + i * 0.0002;
++        s.mesh.rotation.y += 0.008;
++      });
++
++      for (let i = burstPieces.length - 1; i >= 0; i--) {
++        const b = burstPieces[i];
++        b.life -= dt;
++        b.mesh.position.addScaledVector(b.vel, dt * 8);
++        b.vel.y -= dt * 0.045;
++        b.mesh.scale.setScalar(Math.max(0.05, b.life));
++        b.mesh.material.opacity = Math.max(0, b.life);
++        if (b.life <= 0) {
++          scene.remove(b.mesh);
++          b.mesh.geometry.dispose();
++          b.mesh.material.dispose();
++          burstPieces.splice(i, 1);
++        }
++      }
++
++      controls.update();
++      renderer.render(scene, camera);
++      requestAnimationFrame(animate);
++    }
++
++    typeText(phrases[0]);
++    animate();
++  </script>
++</body>
++</html>
