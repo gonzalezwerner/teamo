@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
@@ -359,6 +359,18 @@
     }
 
     const burstPieces = [];
+    const waveRings = [];
+
+    function spawnWave(center = new THREE.Vector3(0, 0, 0)) {
+      const wave = new THREE.Mesh(
+        new THREE.TorusGeometry(0.35, 0.012, 10, 64),
+        new THREE.MeshBasicMaterial({ color: 0xffb2e0, transparent: true, opacity: 0.95 })
+      );
+      wave.position.copy(center);
+      wave.rotation.x = Math.PI / 2;
+      waveRings.push({ mesh: wave, life: 1.2, speed: 2.6 });
+      scene.add(wave);
+    }
     function spawnBurst(point, amount = lowPower ? 22 : 44) {
       for (let i = 0; i < amount; i++) {
         const m = new THREE.Mesh(
@@ -388,6 +400,7 @@
       const hit = raycaster.intersectObject(heart)[0];
       if (hit) {
         spawnBurst(hit.point);
+        spawnWave(hit.point);
         heartMat.emissiveIntensity = 1.9;
         setTimeout(() => (heartMat.emissiveIntensity = 0.85), 180);
       }
@@ -416,13 +429,18 @@
       'Tu mirada tiene más magia que mil estrellas fugaces 🌌'
     ];
 
+    let typingTimer = null;
     function typeText(text) {
+      if (typingTimer) clearInterval(typingTimer);
       phraseBox.textContent = '';
       let i = 0;
-      const timer = setInterval(() => {
+      typingTimer = setInterval(() => {
         phraseBox.textContent += text[i] || '';
         i++;
-        if (i > text.length) clearInterval(timer);
+        if (i > text.length) {
+          clearInterval(typingTimer);
+          typingTimer = null;
+        }
       }, 24);
     }
 
@@ -442,6 +460,8 @@
       spawnBurst(new THREE.Vector3(0, 0.3, 0), lowPower ? 24 : 50);
       spawnBurst(new THREE.Vector3(0.4, -0.1, 0.2), lowPower ? 16 : 32);
       spawnBurst(new THREE.Vector3(-0.4, 0.1, -0.2), lowPower ? 16 : 32);
+      spawnWave(new THREE.Vector3(0, 0.25, 0));
+      spawnWave(new THREE.Vector3(0, 0.15, 0));
       setTimeout(() => {
         heart.scale.setScalar(1);
         ring.scale.setScalar(1);
@@ -494,6 +514,7 @@
       megaWow();
       typeText(phrases[Math.floor(Math.random() * phrases.length)]);
       addKisses(20);
+      shakePower = 0.22;
     });
 
     window.addEventListener('resize', () => {
@@ -503,8 +524,23 @@
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, lowPower ? 1.6 : 2));
     });
 
+
+    const meteorCount = lowPower ? 18 : 34;
+    const meteors = [];
+    for (let i = 0; i < meteorCount; i++) {
+      const m = new THREE.Mesh(
+        new THREE.ConeGeometry(0.018, 0.16, 6),
+        new THREE.MeshBasicMaterial({ color: i % 2 ? 0xffa7dc : 0x9fe9ff, transparent: true, opacity: 0.8 })
+      );
+      m.position.set((Math.random() - 0.5) * 12, Math.random() * 7 - 2, (Math.random() - 0.5) * 12);
+      m.rotation.z = Math.PI * 0.65;
+      meteors.push({ mesh: m, speed: 0.6 + Math.random() * 1.4 });
+      scene.add(m);
+    }
+
     const clock = new THREE.Clock();
     let userInteracting = false;
+    let shakePower = 0;
     ['pointerdown', 'touchstart', 'wheel'].forEach(evt => window.addEventListener(evt, () => (userInteracting = true), { passive: true }));
 
     function animate() {
@@ -547,6 +583,36 @@
           b.mesh.material.dispose();
           burstPieces.splice(i, 1);
         }
+      }
+
+      for (let i = waveRings.length - 1; i >= 0; i--) {
+        const w = waveRings[i];
+        w.life -= dt;
+        w.mesh.scale.multiplyScalar(1 + dt * w.speed);
+        w.mesh.material.opacity = Math.max(0, w.life * 0.9);
+        if (w.life <= 0) {
+          scene.remove(w.mesh);
+          w.mesh.geometry.dispose();
+          w.mesh.material.dispose();
+          waveRings.splice(i, 1);
+        }
+      }
+
+      meteors.forEach((m, i) => {
+        m.mesh.position.x -= dt * (1.8 + m.speed);
+        m.mesh.position.y -= dt * (0.4 + m.speed * 0.2);
+        if (m.mesh.position.x < -7 || m.mesh.position.y < -4) {
+          m.mesh.position.x = 7 + Math.random() * 4;
+          m.mesh.position.y = 2 + Math.random() * 4;
+          m.mesh.position.z = (Math.random() - 0.5) * 10;
+        }
+        m.mesh.material.opacity = 0.45 + Math.abs(Math.sin(t * 2 + i)) * 0.45;
+      });
+
+      if (shakePower > 0.001) {
+        camera.position.x += (Math.random() - 0.5) * shakePower * 0.12;
+        camera.position.y += (Math.random() - 0.5) * shakePower * 0.08;
+        shakePower *= 0.92;
       }
 
       controls.update();
